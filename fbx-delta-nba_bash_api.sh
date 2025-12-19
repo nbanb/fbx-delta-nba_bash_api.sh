@@ -341,12 +341,26 @@ ${ILIADBOX_DEFAULT_CACERT}"
 ####### NBA DETECTING TERMINAL BACKGROUND COLOR #######
 # If terminal background is black, main fonts color would be white
 # If terminal background is white, main fonts color would be black
-detect_term_bg_color () {
-# timeout '-t 0.1' or '-t 0.01' is too short for old machines or weak CPU speed 	
-read -t 0.2 -rs -d \\ -p $'\e]11;?\e\\' BG  
-grep -q ffff/ffff/ffff <<< $(echo -e "$BG") \
-       && W='[30m' \
-       || W='[37m' 
+detect_term_bg_color() {
+    #
+    # FIX GitLab CI :
+    # GitLab n'a pas de terminal interactif (pas de TTY).
+    # Donc "read -t" échoue systématiquement -> exit 1 -> cause la mort du job
+    # quand le script est "sourcé".
+    #
+    # Solution :
+    # - vérifier si on est dans un vrai terminal ([[ -t 0 ]])
+    # - sinon ignorer la détection et ne pas échouer
+    #
+    if [[ -t 0 ]]; then
+        # Terminal interactif : on tente la détection, mais sans faire échouer le script
+        read -t 0.2 -rs -d '\' -p $'\e]11;?\e\\' BG || BG=""
+    else
+        # Pas de TTY (GitLab CI / pipe / source non interactif)
+        BG=""
+    fi
+
+    # BG contient une chaîne comme ^[]11;rgb:ffff/ffff/ffff^G si disponible
 }      
 detect_term_bg_color 2>&1 >/dev/null
 ESC="\033"
